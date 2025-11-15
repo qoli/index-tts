@@ -11,12 +11,26 @@ from typing import Sequence
 from indextts.infer_v2 import IndexTTS2
 
 
+WEBUI_EMO_WEIGHT_DEFAULT = 0.65
+WEBUI_GENERATION_DEFAULTS = {
+    "do_sample": True,
+    "top_p": 0.8,
+    "top_k": 30,
+    "temperature": 0.8,
+    "length_penalty": 0.0,
+    "num_beams": 3,
+    "repetition_penalty": 10.0,
+    "max_mel_tokens": 1500,
+}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Generate speech with IndexTTS2 using a text file and a reference voice clip. "
-            "Defaults follow the README quickstart examples."
-        )
+            "Defaults mirror the WebUI panels so CLI results stay consistent."
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--cfg-path",
@@ -50,8 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--emo-alpha",
         type=float,
-        default=1.0,
-        help="Blending factor for emotional prompts (default: 1.0)",
+        default=WEBUI_EMO_WEIGHT_DEFAULT,
+        help="Emotion weight slider value used by the WebUI (default: 0.65)",
     )
     parser.add_argument(
         "--emo-vector",
@@ -73,6 +87,54 @@ def parse_args() -> argparse.Namespace:
         "--use-random",
         action="store_true",
         help="Enable stochastic decoding for more diverse audio (default: disabled)",
+    )
+    parser.add_argument(
+        "--do-sample",
+        action=argparse.BooleanOptionalAction,
+        default=WEBUI_GENERATION_DEFAULTS["do_sample"],
+        help="Match the WebUI do_sample toggle (use --no-do-sample to disable)",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=WEBUI_GENERATION_DEFAULTS["temperature"],
+        help="Softmax temperature applied during generation",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=WEBUI_GENERATION_DEFAULTS["top_p"],
+        help="Top-p nucleus sampling probability mass",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=WEBUI_GENERATION_DEFAULTS["top_k"],
+        help="Top-k cutoff for the autoregressive GPT (<=0 disables the clamp)",
+    )
+    parser.add_argument(
+        "--num-beams",
+        type=int,
+        default=WEBUI_GENERATION_DEFAULTS["num_beams"],
+        help="Beam search width used for deterministic decoding",
+    )
+    parser.add_argument(
+        "--length-penalty",
+        type=float,
+        default=WEBUI_GENERATION_DEFAULTS["length_penalty"],
+        help="Length penalty passed to the autoregressive decoder",
+    )
+    parser.add_argument(
+        "--repetition-penalty",
+        type=float,
+        default=WEBUI_GENERATION_DEFAULTS["repetition_penalty"],
+        help="Penalty to discourage phrase repetitions",
+    )
+    parser.add_argument(
+        "--max-mel-tokens",
+        type=int,
+        default=WEBUI_GENERATION_DEFAULTS["max_mel_tokens"],
+        help="Maximum mel tokens (lower values truncate audio sooner)",
     )
     parser.add_argument(
         "--interval-silence",
@@ -101,6 +163,11 @@ def parse_args() -> argparse.Namespace:
         "--use-deepspeed",
         action="store_true",
         help="Run the autoregressive GPT under DeepSpeed inference",
+    )
+    parser.add_argument(
+        "--use-cuda-kernel",
+        action="store_true",
+        help="Enable the CUDA inference kernels exposed by the WebUI",
     )
     parser.add_argument(
         "--use-torch-compile",
@@ -172,8 +239,21 @@ def main() -> None:
         use_fp16=args.use_fp16,
         device=args.device,
         use_deepspeed=args.use_deepspeed,
+        use_cuda_kernel=args.use_cuda_kernel,
         use_torch_compile=args.use_torch_compile,
     )
+
+    top_k = args.top_k if args.top_k and args.top_k > 0 else None
+    generation_kwargs = {
+        "do_sample": args.do_sample,
+        "top_p": args.top_p,
+        "top_k": top_k,
+        "temperature": args.temperature,
+        "length_penalty": args.length_penalty,
+        "num_beams": args.num_beams,
+        "repetition_penalty": args.repetition_penalty,
+        "max_mel_tokens": args.max_mel_tokens,
+    }
 
     tts.infer(
         spk_audio_prompt=str(voice_reference),
@@ -189,6 +269,7 @@ def main() -> None:
         verbose=args.verbose,
         max_text_tokens_per_segment=args.max_text_tokens,
         more_segment_before=args.more_segment_before,
+        **generation_kwargs,
     )
 
 
