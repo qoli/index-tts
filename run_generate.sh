@@ -13,12 +13,6 @@ export PYTORCH_MPS_LOW_WATERMARK_RATIO=0.6
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.8
 
 echo ">> Running generate_from_texts.py via uv..."
-# uv run python tools/generate_from_texts.py \
-#   --voice-reference examples/voice_11.wav \
-#   --text-file input_texts.txt \
-#   --output outputs/input_texts.wav \
-#   "$@"
-
 
 uv run python tools/generate_from_texts.py \
   --voice-reference voiceReference.mp3 \

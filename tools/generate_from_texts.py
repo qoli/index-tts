@@ -139,8 +139,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--interval-silence",
         type=int,
-        default=200,
-        help="Silence between segments in milliseconds when the model splits long texts (default: 200)",
+        default=0,
+        help="Silence between segments in milliseconds when the model splits long texts (default: 0)",
     )
     parser.add_argument(
         "--max-text-tokens",
